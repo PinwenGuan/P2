@@ -1,5 +1,5 @@
 """
-This is the script from constructing pressure-potential phase diagrams (pressure-dependent Pourbaix diagrams 
+This is the script for constructing pressure-potential phase diagrams (pressure-dependent Pourbaix diagrams 
 at given pH) of binary metal-hydrogen systems. The input files are pressure-depedent Gibbs energy of the most 
 stable structure for each considered composition, named such as 'hmin_Pd','hmin_PdH','hmin_Pd3H4', etc.. The 
 common file for each system is hmin_H for pure H. The format of each input file is like:
