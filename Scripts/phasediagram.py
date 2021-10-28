@@ -1,5 +1,5 @@
 """
-Pourbaix calculator for hydrides.
+Pressure-independent Pourbaix calculator for hydrides.
 formula: e.g., ['Pd', 'PdH', 'Pd3H4', 'PdH6', 'PdH7', 'PdH8', 'PdH10', 'PdH12'], the first one should be pure metal
 E: e.g., [0.0, 0.03, 0.64, 0.96, 1.20, 1.09, 1.33, 1.71]
 Return: Pourbaix map represented by an array; stable phase compositions  
