@@ -5,5 +5,3 @@ This repo has the data and the scripts related to constructing pressure-potentia
 ## Installation 
 
 [Pymatgen](https://github.com/materialsproject/pymatgen) should be installed first.<br>
-
-
