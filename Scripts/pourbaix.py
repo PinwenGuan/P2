@@ -20,6 +20,8 @@ import numpy as np
 from scipy import interpolate
 import os
 
+# Define conditions.
+kB=1.38065E-23;T=300;P0=1e5
 plim=[1e-4,200] #GPa
 #plim=[1e-4,200]
 nnp=400
@@ -50,6 +52,15 @@ def mkdir(path):
     else:
         print('---  There is this folder!  ---')
 
+"""
+Define studied compositions.
+comp: compositions to be considered except the pure H, consistent with the input file names, e.g., 
+comp=['Ca','CaH2','CaH6'] corresponds to input files 'hmin_Ca','hmin_CaH2','hmin_CaH6' in addition to 
+'hmin_H'.
+x: hydrogen content of the compositions defined in comp.
+nat: number of atoms of the compositions defined in comp.
+"""
+
 """Pd
 comp=['Pd','PdH','Pd3H4','PdH6','PdH7','PdH8','PdH10','PdH12']
 x=[0,0.5,4/7,6/7,7/8,8/9,10/11,12/13]
@@ -71,7 +82,7 @@ x=[0,2/3,0.75,4/5,5/6,6/7,8/9,10/11,11/12,16/17]
 nat=[1,3,4,5,6,7,9,11,12,17]
 """
 #"""La-remove LaH11
-comp=['La','LaH2','LaH3','LaH4','LaH5','LaH6','LaH8','LaH10','LaH16']
+comp=['La','LaH2','LaH3','LaH4','LaH5','LaH6','LaH8','LaH10','LaH16'] 
 x=[0,2/3,0.75,4/5,5/6,6/7,8/9,10/11,16/17]
 nat=[1,3,4,5,6,7,9,11,17]
 #"""
@@ -81,18 +92,16 @@ x=[0,2/3,6/7]
 nat=[1,3,7]
 """
 
-# read p-H data
+# read pressure-Gibbs energy data
 p_each=[[] for i in comp]
 h=[[] for i in comp]
 h_ip=['' for i in comp]
-
 
 for i in range(len(comp)):
 	data=np.loadtxt('hmin_'+comp[i],usecols=(0,1))
 	p_each[i]=data[:,0]
 	h[i]=data[:,1]
 	h_ip[i]=interpolate.interp1d(p_each[i], h[i],kind='cubic')
-
 
 hset=[[] for i in p]
 xset=[[] for i in p]
@@ -106,13 +115,6 @@ for i in range(len(p)):
 			print(comp[j])
 			pass
 
-d=['' for j in range(len(p))]
-names=['' for j in range(len(p))]
-text=['' for j in range(len(p))]
-
-kB=1.38065E-23;T=300;P0=1e5
-
-
 data_H2=np.loadtxt('hmin_H',usecols=(0,1))
 p_H2=data_H2[:,0]
 G_H2=data_H2[:,1]
@@ -124,6 +126,9 @@ for j in range(len(p)):
 
 #calculate Pourbaix diagrams
 mkdir('pb')
+d=['' for j in range(len(p))]
+names=['' for j in range(len(p))]
+text=['' for j in range(len(p))]
 # generate a Pourbaix diagram for each pressure
 for j in range(len(p)):
     try:
@@ -137,6 +142,7 @@ for j in range(len(p)):
     except:
         print(j)
 
+# Merge the calculated phase equilibria at different pressures.
 import glob
 
 c=glob.glob('pb/pbmap*GPa')
@@ -146,15 +152,15 @@ for i in range(len(c)):
 		cc=f.readline().split('eV/A^3')
 		phases=cc[-1].strip('\n').replace('[','').replace(']','').replace('\'','').replace(' ','').split(',')
 		p=float(cc[0].strip('#').replace('P=','').replace(' ',''))
-	a0=np.loadtxt(c[i])[:,int(nph*(pH-phlim[0])/(phlim[1]-phlim[0]))]
+	a0=np.loadtxt(c[i])[:,int(nph*(pH-phlim[0])/(phlim[1]-phlim[0]))] # Slice the Pourbaix diagram at given pH
 	a=[phases[int(j)] for j in a0]
-	s.append((a,p))
+	s.append((a,p)) # Pourbaix diagrams at given pH paired with pressures
 
 s=sorted(s, key=lambda x: x[1])
 map=[i[0] for i in s]
 phases=[]
 for i in range(len(map)):
-	phases=phases+map[i]
+	phases=phases+map[i] # All the phases at given pH at all the pressures
 
 phases_reduced = []
 null=[phases_reduced.append(i) for i in phases if not i in phases_reduced]
@@ -164,17 +170,19 @@ comps_reduced = [Composition(i) for i in phases_reduced]
 comps_H=[i.get_atomic_fraction(Element("H")) for i in comps_reduced]
 comps_phases_reduced=list(zip(comps_H,phases_reduced))
 comps_phases_reduced.sort()
-phases_reduced=[i[1] for i in comps_phases_reduced]
+phases_reduced=[i[1] for i in comps_phases_reduced] # Unduplicated phases ordered by their hydrogen content
 
+# Map the Pourbaix diagram at given pH to numbers corresponding to the order of phases by their hydrogen content.
 map_number=[[] for i in map]
 for i in range(len(map_number)):
 	map_number[i]=[phases_reduced.index(j) for j in map[i]]
 
 map_number=np.array(map_number)
 map_number=map_number.transpose()
+# save the Pourbaix diagram at given pH mapped to numbers corresponding to the order of phases listed in the header.
 np.savetxt('pb/pbmap_pH'+str(pH),map_number,fmt='%5s',header=' pH='+str(pH)+' '+str(phases_reduced)) 
-#The Pourbaix diagram at given pH mapped to numbers corresponding to the order of phases listed in the header.
 
+# plot the diagram.
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import ticker,cm
@@ -185,16 +193,18 @@ plt.rcParams["axes.labelweight"] = "bold"
 
 map_number=np.loadtxt('pb/pbmap_pH'+str(pH))
 cmp=cm.get_cmap('rainbow')
+# Linear or log scale in pressure:
 if scale=='linear':
 	plt.imshow(map_number,extent=[plim[0]/(1e-30)*(1.6*1e-19)/1e9,plim[1]/(1e-30)*(1.6*1e-19)/1e9,ulim[0],ulim[1]],origin='lower',aspect='auto',cmap=cmp)
 	plt.hlines(HER, plim[0]/(1e-30)*(1.6*1e-19)/1e9,plim[1]/(1e-30)*(1.6*1e-19)/1e9, colors = "r", linestyles = "dashed")
+	plt.xlabel("P (GPa)",fontsize=15)
 
 if scale=='log':
 	plt.imshow(map_number,extent=[np.log10(plim[0]/(1e-30)*(1.6*1e-19)/1e9),np.log10(plim[1]/(1e-30)*(1.6*1e-19)/1e9),ulim[0],ulim[1]],origin='lower',aspect='auto',cmap=cmp)
 	plt.hlines(HER, np.log10(plim[0]/(1e-30)*(1.6*1e-19)/1e9),np.log10(plim[1]/(1e-30)*(1.6*1e-19)/1e9), 
 		colors = "k", linestyles = "dashed")
+	plt.xlabel("logP (GPa)",fontsize=15)
 
-plt.xlabel("logP (GPa)",fontsize=15)
 plt.ylabel('U_RHE (V)',fontsize=15)
 plt.tick_params(axis='both',which='major',labelsize=13,width=2)
 plt.rcParams["axes.labelweight"] = "bold"
